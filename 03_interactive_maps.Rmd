@@ -1,0 +1,265 @@
+---
+title: "Interactive maps in R"
+author: 'Piotr Sobczyk'
+date: 'July 2nd, 2018'
+output: 
+  revealjs::revealjs_presentation:
+    theme: solarized
+    highlight: tango
+    transition: convex
+    center: true
+---
+
+```{r loading_packages, echo=FALSE, message=FALSE, warning=F}
+suppressPackageStartupMessages(library(dplyr))
+library(tidyr)
+library(ggmap)
+library(ggthemes)
+library(sf)
+library(animation)
+library(leaflet)
+library(rnaturalearth)
+```
+
+
+# Animation
+
+## Plotting polygons
+
+We get data from Natural Earth project
+
+```{r}
+world <- rnaturalearth::countries110
+class(world)
+world@proj4string
+```
+
+##
+
+```{r}
+europe <- world[world$region_un=="Europe" | world$name =='Turkey',]
+ggplot() +
+  geom_polygon(data = europe, aes(x=long, y = lat, group = group)) +
+  coord_map(projection = "mercator") +
+  scale_x_continuous(limits=c(-50,NA)) 
+```
+
+## {data-background="figures/berlin_skyline.jpg"}
+
+- Tallest buildings in Europe
+- Data from https://en.wikipedia.org/wiki/List_of_tallest_buildings_in_Europe
+- Scraped using **rvest**
+
+## Making plot look better
+
+Transforming Spatial Polygon into sf object
+
+```{r}
+world <- st_as_sf(rnaturalearth::countries110)
+europe <- dplyr::filter(world, region_un=="Europe" | world$name =='Turkey')
+```
+
+A bounding box for continental Europe.
+```{r}
+europe.bbox <- st_polygon(list(
+  matrix(c(-25,29,45,29,45,75,-25,75,-25,29),byrow = T,ncol = 2)))
+
+europe.clipped <- suppressWarnings(st_intersection(europe, st_sfc(europe.bbox, crs=st_crs(europe))))
+```
+
+##
+
+```{r}
+ggplot(europe.clipped, aes(fill=gdp_md_est/1000)) +
+  geom_sf(alpha=0.8,col='white', size=0.2) +
+  scale_fill_viridis_c(name='Median GDP \n(in Billions)') +
+  labs(x=NULL, y=NULL, title=NULL,
+       caption='Source: http://www.naturalearthdata.com/')
+```
+
+
+## Changing coordinate system
+
+```{r}
+ggplot(europe.clipped, aes(fill=gdp_md_est/1000)) +
+  geom_sf(alpha=0.8,col='white', size=0.2) +
+  coord_sf(crs="+proj=aea +lat_1=36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
+  scale_fill_viridis_c(name='Median GDP \n(in Billions)') +
+  labs(x=NULL, y=NULL, title=NULL,
+       caption='Source: http://www.naturalearthdata.com/')
+```
+
+## Back to skyscrapers...
+
+```{r}
+load(file = 'data/data_excercise_tallest_buildings.Rdata')
+skyscrapers_sf <- skyscrapers %>%
+	group_by(City) %>%
+	summarise(count=n()) %>%
+	inner_join(cities_location, by = c('City'='cities_to_geolocate')) %>%
+	st_as_sf(coords = c("lon", "lat"), crs = 4326)
+
+skyscrapers_under_construction_sf <- skyscrapers_under_construction %>%
+	group_by(City) %>%
+	summarise(count=n()) %>%
+	inner_join(cities_location, by = c('City'='cities_to_geolocate')) %>%
+	st_as_sf(coords = c("lon", "lat"), crs = 4326)
+```
+
+## making animation
+
+```{r, eval=FALSE}
+skyscrapers_sf_clipped <- suppressWarnings(st_intersection(skyscrapers_sf, st_sfc(europe.bbox, crs=st_crs(europe))))
+skyscrapers_under_construction_sf_clipped <- suppressWarnings(st_intersection(skyscrapers_under_construction_sf, 
+                                                                              st_sfc(europe.bbox, crs=st_crs(europe))))
+saveGIF(expr = {
+	p <- ggplot(europe.clipped) +
+	  geom_sf(fill = 'gray60', col='white', size=0.2) +
+	  coord_sf(crs="+proj=aea +lat_1=36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
+	  labs(x=NULL, y=NULL, title=NULL,
+	       caption='Source: http://www.naturalearthdata.com/')
+	
+	p1 <- p +
+		geom_sf(data=skyscrapers_sf_clipped, aes(size=count)) +
+		coord_sf(crs="+proj=aea +lat_1=36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
+		labs(title = 'Buildings above 160 meters in Europe') +
+	  theme_map(base_size = 20, base_family = 'Helvetica Neue Light') +
+	  scale_size_area(limits=c(0, 25)) +
+	  theme(plot.title = element_text(hjust = 0.5))
+	plot(p1)
+	
+	p2 <- p +
+		geom_sf(data=skyscrapers_under_construction_sf_clipped, aes(size=count)) +
+		coord_sf(crs="+proj=aea +lat_1=36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
+		labs(title = 'Buildings above 160 meters under construction') +
+	  theme_map(base_size = 20, base_family = 'Helvetica Neue Light') +
+	  scale_size_area(limits=c(0, 25)) +
+	  theme(plot.title = element_text(hjust = 0.5))
+	plot(p2)
+}, movie.name = "figures/tallest_buildings_europe.gif", interval=2, ani.width=800, ani.height=600)
+```
+
+
+##
+
+<iframe src="figures/tallest_buildings_europe.gif" width="800" height="600" frameBorder="0" class="giphy-embed" allowFullScreen></iframe>
+
+# Interactive maps
+
+## plotly
+
+> - Easy solution - use *plotly* package
+> - ```ggplotly(p)```
+> - Resulting html files are very big
+
+##
+
+```{r}
+p <- ggplot(europe.clipped, aes(fill=gdp_md_est/1000)) +
+  geom_sf(alpha=0.8,col='white', size=0.2) +
+  coord_sf(crs="+proj=aea +lat_1=36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
+  scale_fill_viridis_c(name='Median GDP \n(in Billions)') +
+  labs(x=NULL, y=NULL, title=NULL,
+       caption='Source: http://www.naturalearthdata.com/')
+plotly::ggplotly(p)
+```
+
+## 
+
+> - ```htmlwidgets::saveWidget(widget = w, file = 'filename.html')```
+> - Alternative package **tmap**
+> - The same code for creating static and interactive maps
+
+## leaflet
+
+> - javascript library
+> - code is completely different from ggplot
+> - good materials from RStudio https://rstudio.github.io/leaflet/
+> - drawing spatial points and polygons
+> - easy way to add open street map background
+
+## Basics
+
+```{r}
+df <- data.frame(name = 'whyR venue', lon = 17.02795,lat = 51.10135)
+leaflet(df) %>% addTiles() %>%
+  addMarkers(~lon, ~lat, popup = ~htmltools::htmlEscape(name))
+```
+
+## Computing average price per district
+
+```{r}
+print(load('data/real_estate_listings.Rds'))
+districts_wroclaw <- sf::read_sf('data/districts_wroclaw/districts_wroclaw.shp', options = "ENCODING=UTF-8")
+real_estate_listings_sp <- st_as_sf(real_estate_listings, coords = c("lon", "lat"), crs = 4326)
+listings_within_city_limits <- st_within(x = real_estate_listings_sp, y = districts_wroclaw)
+listings_within_city_limits <- sapply(listings_within_city_limits, function(x) length(x) > 0)
+real_estate_listings_sp <- real_estate_listings_sp[listings_within_city_limits,]
+real_estate_listings_sp$district <- districts_wroclaw$dstrct_[unlist(st_within(real_estate_listings_sp,districts_wroclaw))]
+
+districts_mean_price <- real_estate_listings_sp %>%
+  mutate(price_m2 = price/area) %>%
+  filter(price_m2 > 1500, price_m2 < 50000) %>%
+  group_by(district) %>%
+  summarise(price = mean(price/area),
+            no_listings = n()) 
+st_geometry(districts_mean_price) <- NULL
+districts_wroclaw_price_m2 <- districts_wroclaw %>%
+  inner_join(districts_mean_price, by =c('dstrct_'='district'))
+```
+
+##
+
+```{r}
+leaflet(districts_wroclaw_price_m2) %>% 
+	addPolygons(fillOpacity = 0.8, 
+							fillColor = colorNumeric("RdYlGn", reverse = T, domain = NULL)(districts_wroclaw_price_m2$price),
+							stroke = FALSE, group="1",
+							popup = ~paste0("<b>", NAZWAOS, "</b>",
+															"<br><b>Mean m2 price</b>: ", round(districts_wroclaw_price_m2$price), " PLN",
+															"<br><b>Number of listings</b>: ", districts_wroclaw_price_m2$no_listings))
+```
+
+##
+
+```{r eval=FALSE}
+leaflet(districts_wroclaw_price_m2) %>% addTiles() %>% 
+	addPolygons(fillOpacity = 0.8, 
+							fillColor = colorNumeric("RdYlGn", reverse = T, domain = NULL)(districts_wroclaw_price_m2$price),
+							stroke = FALSE, group="1",
+							popup = ~paste0("<b>", NAZWAOS, "</b>",
+															"<br><b>Mean m2 price</b>: ", round(districts_wroclaw_price_m2$price), " PLN",
+															"<br><b>Number of listings</b>: ", districts_wroclaw_price_m2$no_listings)) %>%
+  addLegend("bottomleft", pal = colorNumeric("RdYlGn", domain = NULL), 
+						values = seq(4000, 10000, 1000),
+						title = "Average price for m2",
+						labFormat = labelFormat(suffix = " PLN"),
+						opacity = 1, na.label = "No data")
+```
+
+
+##
+
+```{r echo=FALSE}
+leaflet(districts_wroclaw_price_m2) %>% addTiles() %>% 
+	addPolygons(fillOpacity = 0.8, 
+							fillColor = colorNumeric("RdYlGn", reverse = T, domain = NULL)(districts_wroclaw_price_m2$price),
+							stroke = FALSE, group="1",
+							popup = ~paste0("<b>", NAZWAOS, "</b>",
+															"<br><b>Mean m2 price</b>: ", round(districts_wroclaw_price_m2$price), " PLN",
+															"<br><b>Number of listings</b>: ", districts_wroclaw_price_m2$no_listings)) %>%
+  addLegend("bottomleft", pal = colorNumeric("RdYlGn", domain = NULL), 
+						values = seq(4000, 10000, 1000),
+						title = "Average price for m2",
+						labFormat = labelFormat(suffix = " PLN"),
+						opacity = 1, na.label = "No data")
+```
+
+
+# Excercise
+
+## Leaflet
+
+- Create interactive map in leaflet that shows all R Users Meetings
+- Use 
+
