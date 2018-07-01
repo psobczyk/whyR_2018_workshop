@@ -12,14 +12,20 @@ output:
   
 # Intoduction
   
-## Life could be awesome
+## One of our goals
   
-- Example dot density plot
+```{r motivation_plot, echo = FALSE, out.width = "700px, fig.align='center'"}
+knitr::include_graphics("figures/population_wroclaw.png")
+```
 
-## Notes and data
+## Slides, notes and data
 
 - Available on github
 - https://github.com/psobczyk/whyR_2018_workshop
+
+```{r qr_github, echo = FALSE, out.width = "700px, fig.align='center'"}
+knitr::include_graphics("figures/maps_workshop_github_qr.png")
+```
 
 ## Prerequisites
 

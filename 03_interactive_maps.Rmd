@@ -154,7 +154,7 @@ saveGIF(expr = {
 
 ##
 
-```{r}
+```{r, cache=TRUE}
 p <- ggplot(europe.clipped, aes(fill=gdp_md_est/1000)) +
   geom_sf(alpha=0.8,col='white', size=0.2) +
   coord_sf(crs="+proj=aea +lat_1=36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
@@ -188,7 +188,7 @@ leaflet(df) %>% addTiles() %>%
 
 ## Computing average price per district
 
-```{r}
+```{r, cache=T}
 print(load('data/real_estate_listings.Rds'))
 districts_wroclaw <- sf::read_sf('data/districts_wroclaw/districts_wroclaw.shp', options = "ENCODING=UTF-8")
 real_estate_listings_sp <- st_as_sf(real_estate_listings, coords = c("lon", "lat"), crs = 4326)
@@ -261,5 +261,98 @@ leaflet(districts_wroclaw_price_m2) %>% addTiles() %>%
 ## Leaflet
 
 - Create interactive map in leaflet that shows all R Users Meetings
-- Use 
+- Use file **r_groups_geolocated.Rdata**
+
+# Bonus materials
+
+## Static maps - non-european perspective
+
+```{r}
+ggplot() +
+  geom_sf(data = world) +
+	coord_sf(crs="+proj=moll +lon_0=150") 
+```
+
+## Static maps - densities
+
+> - We constructed choropleth
+> - What if we are intersted not in single statistics, but rather distribution?
+> - E.g. age, education etc?
+
+## Sometimes it's easy
+
+```{r, eval=FALSE}
+ggplot() +
+  geom_sf(data=districts_wroclaw) +
+  geom_sf(data=real_estate_listings_sp[listings_within_city_limits,], 
+          aes(color=price/area>7000, fill=price/area>7000), size=0.1) +
+  scale_color_fivethirtyeight(name='m2 price over 7000 PLN') +
+  scale_fill_fivethirtyeight(name = 'm2 price over 7000 PLN') +
+  labs(title = 'Expensive and cheap apartments in Wroclaw') +
+  theme_map(base_size = 20, base_family = 'Helvetica Neue Light')
+```
+
+##
+
+```{r, echo=FALSE, cache=TRUE}
+ggplot() +
+  geom_sf(data=districts_wroclaw) +
+  geom_sf(data=real_estate_listings_sp[listings_within_city_limits,], 
+          aes(color=price/area>7000, fill=price/area>7000), size=0.1) +
+  scale_color_fivethirtyeight(name='m2 price over 7000 PLN') +
+  scale_fill_fivethirtyeight(name = 'm2 price over 7000 PLN') +
+  labs(title = 'Expensive and cheap apartments in Wroclaw') +
+  theme_map(base_size = 20, base_family = 'Helvetica Neue Light')
+```
+
+## Generating data for dot density plot
+
+```{r generating_population_samples_wroclaw, message=FALSE}
+wroclaw_demo <- st_read('data/dem-rejurb-rejstat-shp/REJURB_20171231.shp', 
+                        'REJURB_20171231')
+wroclaw_demo <- st_transform(wroclaw_demo, crs = 4326)
+wroclaw_demo <- st_as_sf(wroclaw_demo, crs = 4326)
+
+wroclaw_demo_splited <- wroclaw_demo %>%
+  mutate(below_44 = W0_2 +W3_6 +W7_12+ W13_15+ W16_18+ W19_24+ W25_34+ W35_44,
+         above_44 = SUMA - below_44) %>%
+  gather(group, value, below_44, above_44) %>%
+  split(.$group)
+
+generate_samples <- function(data) 
+    suppressMessages(st_sample(data, size = round(data$value / 100)))
+
+points <- purrr::map(wroclaw_demo_splited, generate_samples)
+points <- purrr::imap(points, 
+               ~st_sf(data_frame(age = rep(.y, length(.x))),
+                      geometry = .x))
+points <- do.call(rbind, points)
+```
+
+## 
+
+```{r, eval=FALSE}
+ggplot() +
+  geom_sf(data=wroclaw_demo) +
+  geom_sf(data=points, aes(color=age, fill=age), size=.02) +
+  scale_color_fivethirtyeight() +
+  scale_fill_fivethirtyeight() +
+  theme_map(base_size = 20, base_family = 'Helvetica Neue Light') +
+  labs(title='Population of Wroclaw',
+       caption = 'Each dot represens 100 people\nData:https://geoportal.wroclaw.pl/mapy/demografia/')
+```
+
+## https://tarakc02.github.io/dot-density/
+
+```{r, echo=FALSE}
+ggplot() +
+  geom_sf(data=wroclaw_demo) +
+  geom_sf(data=points, aes(color=age, fill=age), size=.02) +
+  scale_color_fivethirtyeight() +
+  scale_fill_fivethirtyeight() +
+  theme_map(base_size = 20, base_family = 'Helvetica Neue Light') +
+  theme(plot.title = element_text(hjust=0.5)) +
+  labs(title='Population of Wroclaw',
+       caption = 'Each dot represens 100 people\nData:https://geoportal.wroclaw.pl/mapy/demografia/')
+```
 

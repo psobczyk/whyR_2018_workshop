@@ -177,7 +177,7 @@ summary(real_estate_listings)
 
 ## Plotting is again super simple
 
-```{r}
+```{r, cache=TRUE}
 ggplot() + 
   geom_sf(data = districts_wroclaw, aes(fill = inhbtnt), color='white') + 
   geom_sf(data = real_estate_listings_sp, inherit.aes = FALSE, alpha = 0.05) +
@@ -208,7 +208,7 @@ ggplot() +
 
 ##
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, cache=TRUE}
 ggplot() + 
   geom_sf(data = districts_wroclaw, aes(fill = inhbtnt), color='white') + 
   geom_sf(data = real_estate_listings_sp[listings_within_city_limits,], inherit.aes = FALSE, alpha = 0.05) +
@@ -259,9 +259,12 @@ knitr::include_graphics("figures/middle_earth.png")
 
 # Excercise
 
+##
+
 - Get data on listings from my github https://github.com/psobczyk/whyR_2018_workshop/blob/master/data/real_estate_listings.Rds
 - Compute average price of real estates in each district
-- Create (your first) choreopleth
+- Hint: Use **listings_within_city_limits** and function *st_within*
+- Create (your first) choropleth
 
 ## Excercise solution
 
@@ -276,7 +279,7 @@ knitr::include_graphics("figures/middle_earth.png")
 
 > - You can download data for free https://download.bbbike.org/osm/bbbike/Wroclaw/
 > - For our convinience https://github.com/psobczyk/whyR_2018_workshop/tree/master/data/Wroclaw-shp
-> - We shall add trams and rivers from open street map to our choreopleth
+> - We shall add trams and rivers from open street map to our choropleth
 
 
 ## Getting the data
@@ -295,7 +298,20 @@ natural <- sf::read_sf("data/Wroclaw-shp/shape/natural.shp", stringsAsFactors = 
 
 ## Plotting the data
 
-```{r}
+```{r, eval=FALSE}
+ggplot() + 
+  geom_sf(data = districts_wroclaw, aes(fill = inhbtnt), color='white') + 
+  geom_sf(data = trams) +
+  geom_sf(data = rivers, color = 'lightblue') +
+  scale_fill_gradient(low = "white", high = "red") +
+  ggthemes::theme_map() +
+  theme(plot.background = element_rect(fill = 'gray95'),
+        panel.grid = element_line(colour=FALSE))
+```
+
+##
+
+```{r, echo=FALSE}
 ggplot() + 
   geom_sf(data = districts_wroclaw, aes(fill = inhbtnt), color='white') + 
   geom_sf(data = trams) +
@@ -317,3 +333,9 @@ ggplot() +
 > - what is coordinate reference system
 > - how to load spatial data to R using **sf** package
 > - what are data sources
+
+## Limitations of **sf** package
+
+> - Soes not allow to insert custom images 
+> - To use some of existing packages data needs to be SpatialPolygons
+> - 
