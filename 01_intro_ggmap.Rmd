@@ -10,7 +10,7 @@ output:
     center: true
 ---
   
-# Intoduction
+# Introduction
   
 ## One of our goals
   
@@ -23,15 +23,15 @@ knitr::include_graphics("figures/population_wroclaw.png")
 - Available on github
 - https://github.com/psobczyk/whyR_2018_workshop
 
-```{r qr_github, echo = FALSE, out.width = "700px, fig.align='center'"}
+```{r qr_github, echo = FALSE, out.width = "500px, fig.align='center'"}
 knitr::include_graphics("figures/maps_workshop_github_qr.png")
 ```
 
 ## Prerequisites
 
-- Basic ggplot
-- Basic dplyr
-- Drink coffee
+> - Basic ggplot
+> - Basic dplyr
+> - Enthusiasm :)
 
 ## Packages you need
 
@@ -162,9 +162,29 @@ print(load(file = 'data/r_groups_geolocated.Rdata'))
 
 ##
 
-```{r}
+```{r warning=FALSE}
 ggmap(emea) +
   geom_point(data=cities_location, aes(x=lon, y=lat), alpha=0.8)
 ```
 
+## Solution code
 
+```{r, eval=FALSE}
+r_groups <- read.csv('data/groups.csv', stringsAsFactors = F)
+cities_to_geolocate <- unique(paste(r_groups$city, 
+                                    r_groups$country, sep = ', '))
+cities_location <- ggmap::geocode(cities_to_geolocate)
+cities_location <- data.frame(cities_location, 
+                              cities_to_geolocate, stringsAsFactors = F)
+while(any(is.na(cities_location$lon))){
+	cities_to_geolocate <- cities_location$cities_to_geolocate[is.na(cities_location$lon)]
+	print(sprintf('%s cities left', length(cities_to_geolocate)))
+	missing <- ggmap::geocode(cities_to_geolocate)
+	cities_location <- cities_location %>%
+		filter(!is.na(lon)) %>%
+		rbind(data.frame(missing, cities_to_geolocate, stringsAsFactors = F))
+}
+
+emea <- get_map(location = c(10,22), zoom = 3)
+america <- get_map(location = c(-90,5), zoom = 3)
+asia <- get_map(location = c(105, 10), zoom = 3)

@@ -80,7 +80,18 @@ ggplot(europe.clipped, aes(fill=gdp_md_est/1000)) +
 
 ## Changing coordinate system
 
-```{r}
+```{r, eval=FALSE}
+ggplot(europe.clipped, aes(fill=gdp_md_est/1000)) +
+  geom_sf(alpha=0.8,col='white', size=0.2) +
+  coord_sf(crs="+proj=aea +lat_1=36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
+  scale_fill_viridis_c(name='Median GDP \n(in Billions)') +
+  labs(x=NULL, y=NULL, title=NULL,
+       caption='Source: http://www.naturalearthdata.com/')
+```
+
+## Changing coordinate system
+
+```{r, echo=FALSE, cache=TRUE}
 ggplot(europe.clipped, aes(fill=gdp_md_est/1000)) +
   geom_sf(alpha=0.8,col='white', size=0.2) +
   coord_sf(crs="+proj=aea +lat_1=36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
@@ -154,7 +165,19 @@ saveGIF(expr = {
 
 ##
 
-```{r, cache=TRUE}
+```{r, eval=FALSE}
+p <- ggplot(europe.clipped, aes(fill=gdp_md_est/1000)) +
+  geom_sf(alpha=0.8,col='white', size=0.2) +
+  coord_sf(crs="+proj=aea +lat_1=36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
+  scale_fill_viridis_c(name='Median GDP \n(in Billions)') +
+  labs(x=NULL, y=NULL, title=NULL,
+       caption='Source: http://www.naturalearthdata.com/')
+plotly::ggplotly(p)
+```
+
+##
+
+```{r, cache=TRUE, echo=FALSE}
 p <- ggplot(europe.clipped, aes(fill=gdp_md_est/1000)) +
   geom_sf(alpha=0.8,col='white', size=0.2) +
   coord_sf(crs="+proj=aea +lat_1=36.333333333333336 +lat_2=65.66666666666667 +lon_0=14") +
@@ -307,7 +330,7 @@ ggplot() +
 
 ## Generating data for dot density plot
 
-```{r generating_population_samples_wroclaw, message=FALSE}
+```{r generating_population_samples_wroclaw, message=FALSE, warning=FALSE, results=FALSE}
 wroclaw_demo <- st_read('data/dem-rejurb-rejstat-shp/REJURB_20171231.shp', 
                         'REJURB_20171231')
 wroclaw_demo <- st_transform(wroclaw_demo, crs = 4326)
@@ -319,6 +342,7 @@ wroclaw_demo_splited <- wroclaw_demo %>%
   gather(group, value, below_44, above_44) %>%
   split(.$group)
 
+#install.packages(c('lwgeom', 'purrr'))
 generate_samples <- function(data) 
     suppressMessages(st_sample(data, size = round(data$value / 100)))
 
@@ -356,3 +380,19 @@ ggplot() +
        caption = 'Each dot represens 100 people\nData:https://geoportal.wroclaw.pl/mapy/demografia/')
 ```
 
+#  References
+
+## Technical
+
+- https://edzer.github.io/UseR2017/
+- https://bhaskarvk.github.io/user2017.geodataviz/notebooks/02-Static-Maps.nb.html#plotting_using_ggplot2
+- https://geocompr.robinlovelace.net/spatial-class.html#vector-data
+- https://www.jessesadler.com/post/gis-with-r-intro/
+- https://rstudio.github.io/leaflet/
+
+## Inspirations
+
+- www.szychtawdanych.pl
+- https://brilliantmaps.com/xkcd/
+- https://tarakc02.github.io/dot-density/
+- http://www.r-chart.com/2016/10/map-of-middle-earth-map-above-was.html

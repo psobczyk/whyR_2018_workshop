@@ -284,16 +284,12 @@ knitr::include_graphics("figures/middle_earth.png")
 
 ## Getting the data
 
-```{r}
+```{r, warning=FALSE}
 railways <- sf::read_sf("data/Wroclaw-shp/shape/railways.shp", stringsAsFactors = F)
 trams <- railways %>%
   filter(type == 'tram')
-
 rivers <- sf::read_sf("data/Wroclaw-shp/shape/waterways.shp", stringsAsFactors = F) %>%
   filter(name %in% c('Odra', 'Oława', 'Kanał Żeglugowy', 'Widawa', 'Ślęza'))
-
-natural <- sf::read_sf("data/Wroclaw-shp/shape/natural.shp", stringsAsFactors = F) %>%
-  filter(name != "")
 ```
 
 ## Plotting the data
@@ -325,9 +321,10 @@ ggplot() +
 ## Excercise
 
 - Read info about parks from *natural.shp*
+- Select only those with non-empty name
 - Add it to the previous plot (choose adequate color)
 
-## What we've learned
+## What we've learned so far...
 
 > - what is shapefile
 > - what is coordinate reference system
